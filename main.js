@@ -8,7 +8,7 @@ require.config({
         filterer: 'filterer'
     },
     deps: ['jquery', 'filterer'],
-    callback: function($) {
+    callback: function($, filterer) {
 
         $('#Filterer').filterer();
     }
