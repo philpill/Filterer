@@ -5,7 +5,7 @@ require.config({
             'jquery-2.0.3.min',
             '//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min'
         ],
-        filterer: 'filterer'
+        filterer: 'jquery.filterer'
     },
     deps: ['jquery', 'filterer'],
     callback: function($, filterer) {
