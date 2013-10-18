@@ -1,0 +1,23 @@
+.filterered {
+	display: none;
+}
+
+.filterer input {
+	width: 250px;
+	border: solid 1px #ccc;
+}
+
+.filterer div {
+	display: none;
+	border: solid 1px #ccc;
+	max-height: 300px;
+	width: 250px;
+}
+
+.filterer div.active {
+	display: block;
+}
+
+.filterer li {
+	display: block;
+}

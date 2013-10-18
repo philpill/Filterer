@@ -10,6 +10,6 @@ require.config({
     deps: ['jquery', 'filterer'],
     callback: function($, filterer) {
 
-        $('#Filterer').filterer();
+        $('input:first').filterer();
     }
 });
