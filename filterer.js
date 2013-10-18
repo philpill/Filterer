@@ -65,20 +65,24 @@ define(function(require) {
 
                 $container.on('focusin', this.controls.$input, this.onInputFocusIn.bind(this));
             
-                $container.on('click', $('li', this.controls.$results), this.onResultClick.bind(this));
+                $container.on('click', 'li', this.onResultClick.bind(this));
             },
             onResultClick: function(e) {
 
+                e.stopImmediatePropagation();
+
                 console.log('onResultClick()');
 
-                var $target = $(e.target);
+                var $currentTarget = $(e.currentTarget);
 
-                console.log($target.text());
+                console.log($currentTarget.text());
 
                 if (this.settings.onResultSelect) {
-                    
+
                     this.settings.onResultSelect();
                 }
+
+                this.hideList();
             },
             onInputFocusIn: function(e) {
 
@@ -155,7 +159,10 @@ define(function(require) {
 
                 console.log('hideList()');
 
-                this.controls.$resultsContainer.removeClass('active');
+                if (this.controls.$resultsContainer.hasClass('active')) {
+
+                    this.controls.$resultsContainer.removeClass('active');
+                }
             }
         }
 
