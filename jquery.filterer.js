@@ -4,209 +4,374 @@ define(function(require) {
 
     $.fn.filterer = function(options) {
 
-        var mock = [
-
-            {'label': 'label-a', 'value': 1, 'location': 'location-a'},
-            {'label': 'label-b', 'value': 2, 'location': 'location-b'},
-            {'label': 'label-c', 'value': 3, 'location': 'location-c'},
-            {'label': 'label-d', 'value': 4, 'location': 'location-d'},
-            {'label': 'label-e', 'value': 5, 'location': 'location-e'},
-            {'label': 'label-f', 'value': 6, 'location': 'location-f'},
-            {'label': 'label-g', 'value': 7, 'location': 'location-g'},
-            {'label': 'label-h', 'value': 8, 'location': 'location-h'},
-            {'label': 'label-i', 'value': 9, 'location': 'location-i'},
-            {'label': 'label-j', 'value': 10, 'location': 'location-j'}
-        ];
-
-        var filterer = (function(options) {
-
-            return {
-
-                defaults: {
-
-                    getUrl: '',
-                    saveUrl: ''
-                },
-                init: function($el) {
-
-                    this.$el = $el;
-
-                    this.settings = $.extend(this.defaults, options);
-
-                    this.hideOriginalElement();
-
-                    this.controls = this.assembleControls(this.getControls());
-
-                    this.mirrorAttributes();
-
-                    this.bindEvents();
-
-                    return this;
-                },
-                hideOriginalElement: function() {
-
-                    this.$el.hide();
-                },
-                assembleControls: function(controls) {
-
-                    controls.$container.append(controls.$input);
-
-                    controls.$container.append(controls.$resultsContainer);
-
-                    controls.$resultsContainer.append(controls.$results);
-
-                    this.$el.after(controls.$container);
-
-                    return controls;
-                },
-                getControls: function() {
-
-                    var controls = {};
-
-                    controls.$container = $('<section class="filterer"></section>');
-
-                    controls.$input = $('<input />');
-
-                    controls.$resultsContainer = $('<div></div>');
-
-                    controls.$results = $('<ul></ul>');
-
-                    return controls;
-                },
-                mirrorAttributes: function() {
-
-                    this.controls.$input.attr('placeholder', this.$el.attr('placeholder'))
-                },
-                bindEvents: function() {
-
-                    var $container = this.controls.$container;
-
-                    $container.on('click', function(e) { e.stopPropagation(); });
-
-                    $container.on('keyup', this.controls.$input, this.onInputKeyUp.bind(this));
-
-                    $container.on('focusin', this.controls.$input, this.onInputFocusIn.bind(this));
-
-                    $container.on('click', 'li', this.onResultClick.bind(this));
-                },
-                reset: function() {
-
-                    this.controls.$input.val('');
-
-                    this.controls.$results.empty();
-                },
-                onResultClick: function(e) {
-
-                    e.stopImmediatePropagation();
-
-                    console.log('onResultClick()');
-
-                    var $currentTarget = $(e.currentTarget);
-
-                    console.log($currentTarget.text());
-
-                    if (this.settings.onResultSelect) {
-
-                        this.settings.onResultSelect($currentTarget.data('value'));
-                    }
-
-                    this.hideList();
-
-                    this.reset();
-                },
-                onInputFocusIn: function(e) {
-
-                    console.log('onInputFocus()');
-
-                    var query = $(e.target).val();
-
-                    console.log(query);
-
-                    if (query.length > 0) {
-
-                        this.performSearch({ query: query });
-                    }
-                },
-                onInputKeyUp: function(e) {
-
-                    console.log('onKeyUp()');
-
-                    var query = this.controls.$input.val();
-
-                    this.performSearch({ query: query });
-                },
-                performSearch: function(query) {
-
-                    console.log('performSearch()');
-
-                    if (this.settings.applySearchParameters) {
-                        query = $.extend(query, this.settings.applySearchParameters());
-                    }
-
-                    console.log(query);
-
-                    $.when(this.getResults(query))
-                    .then(this.populateList.bind(this))
-                    .then(this.displayList.bind(this));
-                },
-                getResults: function(query) {
-
-                    console.log('getResults()');
-
-                    console.log(query);
-
-                    var dfd = new $.Deferred();
-
-                    $.ajax(this.settings.getUrl, { query: query })
-                    .done(function(data) {
-                        dfd.resolve(mock);
-                    })
-                    .fail(function() {
-                        dfd.resolve(mock);
-                    });
-
-                    return dfd;
-                },
-                populateList: function(data) {
-
-                    console.log('populateList');
-
-                    console.log(data);
-
-                    var i = 0, $list = this.controls.$results;
-
-                    $list.empty();
-
-                    for (i=0,l=data.length;i<l;i++) {
-
-                        $list.append('<li data-value="' + data[i].value + '" data-location="' + data[i].location + '">' + data[i].label + '</li>');
-                    }
-                },
-                displayList: function() {
-
-                    console.log('displayList()');
-
-                    if (!this.controls.$resultsContainer.hasClass('active')) {
-
-                        this.controls.$resultsContainer.addClass('active');
-
-                        $('body').one('click', this.hideList.bind(this));
-                    }
-                },
-                hideList: function() {
-
-                    console.log('hideList()');
-
-                    if (this.controls.$resultsContainer.hasClass('active')) {
-
-                        this.controls.$resultsContainer.removeClass('active');
-                    }
-                }
-            };
+        /** ------- ---- */
+        /** Private area */
+        /** ------- ---- */
+
+        var controls, settings,
+
+        $this = this,
+
+        defaults = {
+
+            getUrl: '',
+            applySearchParameters: $.noop,
+            onResultSelect: $.noop
+
+        },
+
+        /**
+         * Generate plugin elements - returns object containing constituent parts
+         * @return {Object}
+         * @private
+         */
+        getControls = function () {
+
+            var controls = {};
+            controls.$container = $('<section class="filterer"></section>');
+            controls.$input = $('<input />');
+            controls.$resultsContainer = $('<div></div>');
+            controls.$results = $('<ul></ul>');
+            return controls;
+        },
+
+        /**
+         * Assemble given controls
+         * @param {Object} controls Object containing separate jQuery element objects
+         * @return {Object}
+         * @private
+         */
+        assembleControls = function(controls) {
+
+            controls.$container.append(controls.$input);
+            controls.$container.append(controls.$resultsContainer);
+            controls.$resultsContainer.append(controls.$results);
+            $this.after(controls.$container);
+            return controls;
+        },
+
+        /**
+         * Copy required attributes from original element
+         * @private
+         */
+        mirrorAttributes = function() {
+
+            controls.$input.attr('placeholder', $this.attr('placeholder'));
+        },
+
+        /**
+         * Hide original element from view
+         * @private
+         */
+        hideOriginalElement = function() {
+
+            $this.hide();
+        },
+
+        /**
+         * Hide list of search results, if displayed
+         * @private
+         */
+        hideList = function() {
+
+            if (controls.$resultsContainer.hasClass('active')) {
+                controls.$resultsContainer.removeClass('active');
+            }
+        },
+
+        /**
+         * Reset plugin UI
+         * @private
+         */
+        reset = function() {
+
+            //highlightSearchField();
+            hideList();
+            controls.$results.empty();
+            controls.$input.val('');
+        },
+
+        /**
+         * Unhide search results list and bind event to hide again on body click
+         * @private
+         */
+        displayList = function() {
+
+            if (!controls.$resultsContainer.hasClass('active')) {
+                controls.$resultsContainer.addClass('active');
+                $('body').one('click', hideList);
+            }
+        },
+
+        /**
+         * Generate markup for search results and append to results list
+         * @param {Object} data Search results
+         * @return {jQuery}
+         * @private
+         */
+        populateList = function(data) {
+
+            var i = 0, $list = controls.$results, $item;
+            $list.empty();
+            for (i=0,l=data.length;i<l;i++) {
+                $item = $('<li></li>');
+                $item.attr('data-value',data[i].value);
+                $item.attr('data-location',data[i].location);
+                $item.text(data[i].label);
+                $list.append($item);
+            }
+            return $list;
+        },
+
+        /**
+         * Make search request using given parameters
+         * @param {Object} query Search parameters
+         * @return {jQuery.deferred}
+         * @private
+         */
+        getResults = function(query) {
+            var dfd = new $.Deferred();
+            $.ajax({
+                url: settings.getUrl,
+                type: "GET",
+                data: decodeURIComponent($.param(query))
+            })
+            .done(dfd.resolve);
+            return dfd;
+        },
+
+        /**
+         * Gather parameters, call search function and handle results
+         * @param {Object} query Search parameters
+         * @return {jQuery.deferred}
+         * @private
+         */
+        performSearch = function(query) {
+
+            $.when(getResults(query))
+            .then(populateList)
+            .then(displayList)
+            .then(activateFirstResult);
+        },
+
+        /**
+         * Call performSearch() passing search input value as argument
+         * @return {jQuery}
+         * @private
+         */
+        performSearchWithInput = function() {
+
+            performSearch(getSearchParameters());
+        },
+
+        /**
+         * Get first active element
+         * @return {jQuery}
+         * @private
+         */
+        getActiveResult = function() {
+
+            return controls.$results.find('.active').first();
+        },
+
+        /**
+         * Add active class to first list item in results list
+         * @private
+         */
+        activateFirstResult = function() {
+
+            var $firstResult = controls.$results.find('li').first();
+            activateResult($firstResult);
+        },
+
+        /**
+         * Activate list item currently being hovered over
+         * @param {jQuery.Event} e
+         * @private
+         */
+        onResultMouseEnter = function(e) {
+
+            activateResult($(e.currentTarget));
+        },
+
+        /**
+         * Handle result selection and update results list
+         * @param {jQuery.Event} e
+         * @return {jQuery.deferred}
+         * @private
+         */
+        onResultClick = function(e) {
+
+            e.preventDefault();
+            settings.onResultSelect($(e.currentTarget).data('value'));
+            highlightSearchField();
+        },
+
+        /**
+         * Get combined search arguments from text input and plugin options
+         * @return {Object}
+         * @private
+         */
+        getSearchParameters = function() {
+
+            return $.extend({ query: controls.$input.val() }, settings.applySearchParameters());
+        },
+
+        /**
+         * Request search on input focus, if value exists in field
+         * @param {jQuery.Event} e
+         * @private
+         */
+        onInputFocusIn = function(e) {
+
+            if ($(e.target).val().length > 0) {
+                performSearch(getSearchParameters());
+            }
+        },
+
+        /**
+         * Add active option to table
+         * @private
+         */
+        selectActiveResult = function() {
+
+            var activeResult = getActiveResult();
+            selectResult(activeResult.data('value'));
+        },
+
+        /**
+         * Set previous search result option active, if present
+         * @private
+         */
+        activatePreviousResult = function () {
+
+            var $activeResult = getActiveResult(),
+                $prev = $activeResult.prev();
+
+            activateResult($prev);
+        },
+
+        /**
+         * Set next search result option active, if present
+         * @private
+         */
+        activateNextResult = function () {
+
+            var $activeResult = getActiveResult(),
+                $next = $activeResult.next();
+
+            activateResult($next);
+        },
+
+        /**
+         * Activate given search result option, deactivate others
+         * @param {jQuery} $result Search result option to set active
+         * @private
+         */
+        activateResult = function ($result) {
+
+            if ($result.length) {
+                deactivateResults();
+                $result.addClass('active');
+            }
+        },
+
+        /**
+         * Deactivate all search results
+         * @private
+         */
+        deactivateResults = function () {
+
+            controls.$results.find('li').removeClass('active');
+        },
+
+        /**
+         * Apply optional handler to search result value
+         * @param {String} value Search option ID
+         * @private
+         */
+        selectResult = function (value) {
+
+            settings.onResultSelect(value);
+        },
+
+        /**
+         * Selects the text in the search field and implicitly performs search
+         * @private
+         */
+        highlightSearchField = function () {
+
+            controls.$input.select();
+        },
+
+        /**
+         * Call search function on entering a value into input field, plus keyboard navigation
+         * @param {jQuery.event} e Keyup event
+         * @private
+         */
+        onInputKeyUp = function(e) {
+
+            switch (e.which) {
+                case 27: //escape
+                    reset();
+                    break;
+                case 38: //up
+                    activatePreviousResult();
+                    e.preventDefault();
+                    break;
+                case 40: //down
+                    activateNextResult();
+                    e.preventDefault();
+                    break;
+                case 13: //enter
+                    selectActiveResult();
+                    performSearchWithInput();
+                    highlightSearchField();
+                    e.preventDefault();
+                    break
+                default:
+                    performSearchWithInput();
+                    break;
+            }
+        },
+
+        /**
+         * Attach handlers to events
+         * @private
+         */
+        bindEvents = function() {
+
+            var $container = controls.$container;
+            $container.on('click', function(e) { e.stopPropagation(); });
+            $container.on('keyup', controls.$input, onInputKeyUp);
+            $container.on('focusin', controls.$input, onInputFocusIn);
+            $container.on('click', function(e) { e.preventDefault(); });
+            $container.on('click', 'li', onResultClick);
+            $container.on('mouseenter', 'li', onResultMouseEnter);
+        },
+
+        /**
+         * Initialise plugin - replace original element and bind events (self invoking)
+         * @param {Object} options Plugin configuration
+         * @private
+         */
+        init = (function(options) {
+
+            settings = $.extend(defaults, options);
+            hideOriginalElement();
+            controls = assembleControls(getControls());
+            mirrorAttributes();
+            bindEvents();
 
         })(options);
 
-        return filterer.init(this);
-    };
+        /** ------ ---- */
+        /** Public area */
+        /** ------ ---- */
 
+        return {
+
+            reset : reset
+        };
+    };
 });
