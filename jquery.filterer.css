@@ -1,23 +1,54 @@
 .filterered {
-	display: none;
+    display: none;
+}
+
+.filterer {
+    width: 500px;
+    position: relative;
+    display: inline-block;
+    padding-left: 10px;
 }
 
 .filterer input {
-	width: 250px;
-	border: solid 1px #ccc;
+    width: 100%;
+    border: 1px solid #999;
+    border-radius: 3px;
+    padding: 5px;
+}
+
+.filterer input:focus {
+
+    border: solid 1px #087DC2;
+    box-shadow: 0 0 2px #aaa;
+}
+
+.filterer input.no-results {
+
+    border: solid 1px #f00;
 }
 
 .filterer div {
-	display: none;
-	border: solid 1px #ccc;
-	max-height: 300px;
-	width: 250px;
+    display: none;
+    border: solid 1px #ccc;
+    max-height: 300px;
+    width: 100%;
+    position: absolute;
+    background: #fff;
+    margin-top: 5px;
+    box-shadow: 0 0 2px #aaa;
 }
 
 .filterer div.active {
-	display: block;
+    display: block;
 }
 
 .filterer li {
-	display: block;
+    cursor: pointer;
+    display: block;
+}
+
+.filterer li.active {
+
+    background: #087DC2;
+    color: #fff;
 }

@@ -1,8 +1,8 @@
-define(function(require) {
+define(function (require) {
 
     var $ = require('jquery');
 
-    $.fn.filterer = function(options) {
+    $.fn.filterer = function (options) {
 
         /** ------- ---- */
         /** Private area */
@@ -41,7 +41,7 @@ define(function(require) {
          * @return {Object}
          * @private
          */
-        assembleControls = function(controls) {
+        assembleControls = function (controls) {
 
             controls.$container.append(controls.$input);
             controls.$container.append(controls.$resultsContainer);
@@ -54,7 +54,7 @@ define(function(require) {
          * Copy required attributes from original element
          * @private
          */
-        mirrorAttributes = function() {
+        mirrorAttributes = function () {
 
             controls.$input.attr('placeholder', $this.attr('placeholder'));
         },
@@ -63,7 +63,7 @@ define(function(require) {
          * Hide original element from view
          * @private
          */
-        hideOriginalElement = function() {
+        hideOriginalElement = function () {
 
             $this.hide();
         },
@@ -72,7 +72,7 @@ define(function(require) {
          * Hide list of search results, if displayed
          * @private
          */
-        hideList = function() {
+        hideList = function () {
 
             if (controls.$resultsContainer.hasClass('active')) {
                 controls.$resultsContainer.removeClass('active');
@@ -83,10 +83,9 @@ define(function(require) {
          * Reset plugin UI
          * @private
          */
-        reset = function() {
+        reset = function () {
 
-            //highlightSearchField();
-            hideList();
+            clearState();
             controls.$results.empty();
             controls.$input.val('');
         },
@@ -95,7 +94,7 @@ define(function(require) {
          * Unhide search results list and bind event to hide again on body click
          * @private
          */
-        displayList = function() {
+        displayList = function () {
 
             if (!controls.$resultsContainer.hasClass('active')) {
                 controls.$resultsContainer.addClass('active');
@@ -106,21 +105,38 @@ define(function(require) {
         /**
          * Generate markup for search results and append to results list
          * @param {Object} data Search results
-         * @return {jQuery}
          * @private
          */
-        populateList = function(data) {
+        populateList = function (data) {
 
-            var i = 0, $list = controls.$results, $item;
-            $list.empty();
-            for (i=0,l=data.length;i<l;i++) {
-                $item = $('<li></li>');
-                $item.attr('data-value',data[i].value);
-                $item.attr('data-location',data[i].location);
-                $item.text(data[i].label);
-                $list.append($item);
+            var i = 0,
+                $list = controls.$results,
+                items = [],
+                collection = data.delivery_points;
+            for (i=0, l=collection.length; i<l; i++) {
+                items.push(createResultItem(collection[i]));
             }
-            return $list;
+
+            $list.append(items);
+        },
+
+        /**
+         * Create item to add to search results list
+         * @param {Object} data Search result item data
+         * @return {jQuery} $item Search result item
+         * @private
+         */
+        createResultItem = function (data) {
+
+            //TODO: proper templating - deliberately formatted for easy refactor
+            var $item = $('<li><span class="name"></span><span class="location"></span></li>');
+            $item.attr('data-id', data.id);
+            $item.attr('data-location', data.location);
+            $item.attr('data-sla', data.sla);
+            $item.attr('data-name', data.name);
+            $item.find('.name').text(data.name);
+            $item.find('.location').text(data.location);
+            return $item[0];
         },
 
         /**
@@ -129,29 +145,83 @@ define(function(require) {
          * @return {jQuery.deferred}
          * @private
          */
-        getResults = function(query) {
-            var dfd = new $.Deferred();
-            $.ajax({
-                url: settings.getUrl,
+        getResults = function (query) {
+
+            return $.ajax({
+                url: settings.getUrl + 'j',
                 type: "GET",
                 data: decodeURIComponent($.param(query))
-            })
-            .done(dfd.resolve);
-            return dfd;
+            });
         },
 
         /**
-         * Gather parameters, call search function and handle results
+         * Validate search results
+         * @param {Object} data AJAX response data
+         * @private
+         */
+        validateResponse = function (data) {
+            if (!data.delivery_points) {
+                displayError({ msg: settings.text.ajaxError, data: data });
+            } else if (data.delivery_points.length < 1) {
+                displayError({ msg: settings.text.noResultsFound, data: data });
+            } else {
+                loadSearchResults(data);
+            };
+        },
+
+        /**
+         * Assemble and display search rsults
+         * @param {Object} data Search results
+         * @private
+         */
+        loadSearchResults = function (data) {
+
+            populateList(data);
+            displayList();
+            activateFirstResult();
+        },
+
+        /**
+         * Clear previous search results, call search function with given arguments and handle results
          * @param {Object} query Search parameters
          * @return {jQuery.deferred}
          * @private
          */
-        performSearch = function(query) {
+        performSearch = function (query) {
+
+            clearState();
 
             $.when(getResults(query))
-            .then(populateList)
-            .then(displayList)
-            .then(activateFirstResult);
+            .always(validateResponse); //not semantic but clean
+        },
+
+        /**
+         * Remove results of previous search
+         * @private
+         */
+        clearState = function () {
+
+            removeErrors();
+            hideList();
+        },
+
+        /**
+         * Remove displayed error elements of previous searches
+         * @private
+         */
+        removeErrors = function () {
+
+            controls.$input.removeClass('no-results');
+        },
+
+        /**
+         * display error elements of current searches
+         * @param {Object} data Error data (unused)
+         * @private
+         */
+        displayError = function (data) {
+
+            controls.$input.addClass('no-results');
         },
 
         /**
@@ -159,7 +229,7 @@ define(function(require) {
          * @return {jQuery}
          * @private
          */
-        performSearchWithInput = function() {
+        performSearchWithInput = function () {
 
             performSearch(getSearchParameters());
         },
@@ -169,7 +239,7 @@ define(function(require) {
          * @return {jQuery}
          * @private
          */
-        getActiveResult = function() {
+        getActiveResult = function () {
 
             return controls.$results.find('.active').first();
         },
@@ -178,7 +248,7 @@ define(function(require) {
          * Add active class to first list item in results list
          * @private
          */
-        activateFirstResult = function() {
+        activateFirstResult = function () {
 
             var $firstResult = controls.$results.find('li').first();
             activateResult($firstResult);
@@ -189,7 +259,7 @@ define(function(require) {
          * @param {jQuery.Event} e
          * @private
          */
-        onResultMouseEnter = function(e) {
+        onResultMouseEnter = function (e) {
 
             activateResult($(e.currentTarget));
         },
@@ -200,7 +270,7 @@ define(function(require) {
          * @return {jQuery.deferred}
          * @private
          */
-        onResultClick = function(e) {
+        onResultClick = function (e) {
 
             e.preventDefault();
             settings.onResultSelect($(e.currentTarget).data('value'));
@@ -212,7 +282,7 @@ define(function(require) {
          * @return {Object}
          * @private
          */
-        getSearchParameters = function() {
+        getSearchParameters = function () {
 
             return $.extend({ query: controls.$input.val() }, settings.applySearchParameters());
         },
@@ -222,7 +292,7 @@ define(function(require) {
          * @param {jQuery.Event} e
          * @private
          */
-        onInputFocusIn = function(e) {
+        onInputFocusIn = function (e) {
 
             if ($(e.target).val().length > 0) {
                 performSearch(getSearchParameters());
@@ -233,7 +303,7 @@ define(function(require) {
          * Add active option to table
          * @private
          */
-        selectActiveResult = function() {
+        selectActiveResult = function () {
 
             var activeResult = getActiveResult();
             selectResult(activeResult.data('value'));
@@ -309,7 +379,7 @@ define(function(require) {
          * @param {jQuery.event} e Keyup event
          * @private
          */
-        onInputKeyUp = function(e) {
+        onInputKeyUp = function (e) {
 
             switch (e.which) {
                 case 27: //escape
@@ -339,13 +409,13 @@ define(function(require) {
          * Attach handlers to events
          * @private
          */
-        bindEvents = function() {
+        bindEvents = function () {
 
             var $container = controls.$container;
-            $container.on('click', function(e) { e.stopPropagation(); });
+            $container.on('click', function (e) { e.stopPropagation(); });
             $container.on('keyup', controls.$input, onInputKeyUp);
             $container.on('focusin', controls.$input, onInputFocusIn);
-            $container.on('click', function(e) { e.preventDefault(); });
+            $container.on('click', function (e) { e.preventDefault(); });
             $container.on('click', 'li', onResultClick);
             $container.on('mouseenter', 'li', onResultMouseEnter);
         },
@@ -355,7 +425,7 @@ define(function(require) {
          * @param {Object} options Plugin configuration
          * @private
          */
-        init = (function(options) {
+        init = (function (options) {
 
             settings = $.extend(defaults, options);
             hideOriginalElement();
