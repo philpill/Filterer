@@ -148,7 +148,7 @@ define(function (require) {
         getResults = function (query) {
 
             return $.ajax({
-                url: settings.getUrl + 'j',
+                url: settings.getUrl,
                 type: "GET",
                 data: decodeURIComponent($.param(query))
             });
